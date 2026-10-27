@@ -112,10 +112,27 @@ class EdgeTTS(BaseTool):
         output_path = Path(inputs.get("output_path", "tts_output.mp3"))
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
+        words: list[dict[str, Any]] = []
+
         async def _run() -> None:
-            await edge_tts.Communicate(inputs["text"], voice, rate=rate, pitch=pitch).save(str(output_path))
+            # PATCH: stream with WordBoundary so word timings are available for captions
+            comm = edge_tts.Communicate(inputs["text"], voice, rate=rate, pitch=pitch, boundary="WordBoundary")
+            with open(output_path, "wb") as fh:
+                async for chunk in comm.stream():
+                    if chunk["type"] == "audio":
+                        fh.write(chunk["data"])
+                    elif chunk["type"] == "WordBoundary":
+                        start = chunk["offset"] / 1e7
+                        words.append({"word": chunk["text"], "start": round(start, 3),
+                                      "end": round(start + chunk["duration"] / 1e7, 3)})
 
         asyncio.run(_run())
+        if words:
+            import json
+            output_path.with_suffix(".words.json").write_text(
+                json.dumps({"segments": [{"start": words[0]["start"], "end": words[-1]["end"],
+                                          "text": inputs["text"], "words": words}]}, ensure_ascii=False),
+                encoding="utf-8")
 
         if not output_path.exists() or output_path.stat().st_size == 0:
             return ToolResult(success=False, error=f"Edge TTS output missing/empty: {output_path}")

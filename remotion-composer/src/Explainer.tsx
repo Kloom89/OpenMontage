@@ -2,7 +2,7 @@ import {
   AbsoluteFill,
   Audio,
   Img,
-  OffthreadVideo,
+  Video as OffthreadVideo, // Html5 video: compositor (OffthreadVideo) crashes on Windows
   Sequence,
   interpolate,
   spring,
