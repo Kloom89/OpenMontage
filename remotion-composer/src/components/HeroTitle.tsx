@@ -37,8 +37,11 @@ export const HeroTitle: React.FC<HeroTitleProps> = ({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // Staggered letter-by-letter spring
+  // Staggered letter-by-letter spring, wrapped per word so lines never break mid-word
+  const titleWords = title.split(" ");
   const titleChars = title.split("");
+  const fontSize = title.length > 24 ? 58 : 72;
+  let charIndex = 0;
 
   return (
     <AbsoluteFill
@@ -49,43 +52,43 @@ export const HeroTitle: React.FC<HeroTitleProps> = ({
       }}
     >
       <div style={{ textAlign: "center", maxWidth: "85%" }}>
-        {/* Main title with per-character spring */}
         <div
           style={{
-            fontSize: 72,
+            fontSize,
             fontWeight: 800,
             fontFamily: "Space Grotesk, Inter, system-ui, sans-serif",
             lineHeight: 1.2,
             display: "flex",
             justifyContent: "center",
             flexWrap: "wrap",
-            gap: 0,
+            columnGap: "0.3em",
           }}
         >
-          {titleChars.map((char, i) => {
-            const delay = i * 1.2;
-            const charSpring = spring({
-              frame: frame - delay,
-              fps,
-              config: { damping: 12, stiffness: 150 },
-            });
-
-            return (
-              <span
-                key={i}
-                style={{
-                  display: "inline-block",
-                  opacity: charSpring,
-                  transform: `translateY(${interpolate(charSpring, [0, 1], [30, 0])}px)`,
-                  color: i < 8 ? accentColor : textColor, // Accent first word
-                  whiteSpace: char === " " ? "pre" : undefined,
-                  minWidth: char === " " ? "0.3em" : undefined,
-                }}
-              >
-                {char}
-              </span>
-            );
-          })}
+          {titleWords.map((word, wi) => (
+            <span key={wi} style={{ display: "inline-block", whiteSpace: "nowrap" }}>
+              {word.split("").map((char, ci) => {
+                const i = charIndex++;
+                const charSpring = spring({
+                  frame: frame - i * 1.2,
+                  fps,
+                  config: { damping: 12, stiffness: 150 },
+                });
+                return (
+                  <span
+                    key={ci}
+                    style={{
+                      display: "inline-block",
+                      opacity: charSpring,
+                      transform: `translateY(${interpolate(charSpring, [0, 1], [30, 0])}px)`,
+                      color: i < 8 ? accentColor : textColor, // Accent first word
+                    }}
+                  >
+                    {char}
+                  </span>
+                );
+              })}
+            </span>
+          ))}
         </div>
 
         {/* Subtitle */}
